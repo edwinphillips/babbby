@@ -1,5 +1,8 @@
 <?php
 
+include 'html_writer.class.php';
+include 'id3tagreader.php';
+
 /**
  * Returns random hex colour code
  *
@@ -22,7 +25,7 @@ function random_colour($selection=array()) {
 }
 
 /**
- * Returns random filename from /video folder
+ * Returns random filename from passed folder
  *
  * @param string directory to pick a random file from
  * @return string
