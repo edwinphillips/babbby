@@ -4,18 +4,18 @@ class html_writer {
 
     var $type;
     var $attributes;
-    var $voidelements;
+    var $void;
 
     /**
      * Class constructor
      *
      * @param string $type
-     * @param array $voidelements
+     * @param array $void
      */
     function __construct($type) {
 
         $this->type = strtolower($type);
-        $this->voidelements = array(
+        $this->void = array(
             'area',
             'base',
             'br',
@@ -36,14 +36,14 @@ class html_writer {
     }
 
     /**
-     * Get a html element attribute value
      *
-     * @param type $attribute
-     * @return type
+     * @param array $attributes
      */
-    function get($attribute) {
+    function set_attributes($attributes=array()) {
 
-        return $this->attributes[$attribute];
+        foreach ($attributes as $attribute => $value) {
+            $this->set_attribute($attribute, $value);
+        }
     }
 
     /**
@@ -61,20 +61,24 @@ class html_writer {
         }
     }
 
-    function set_attributes($attributes) {
+    /**
+     * Get a html element attribute value
+     *
+     * @param string $attribute
+     * @return string
+     */
+    function get_attribute($attribute) {
 
-        foreach ($attributes as $attribute => $value) {
-            $this->set_attribute($attribute, $value);
-        }
+        return $this->attributes[$attribute];
     }
 
     /**
      * Remove a html element attribute
      *
-     * @param type $att
+     * @param string $att
      * @return void
      */
-    function remove($att) {
+    function remove_attribute($att) {
 
         if (isset($this->attributes[$att])) {
             unset($this->attributes[$att]);
@@ -86,7 +90,7 @@ class html_writer {
      *
      * @return void
      */
-    function clear() {
+    function clear_attributes() {
 
         $this->attributes = array();
     }
@@ -97,10 +101,10 @@ class html_writer {
      * @param string $object
      * @return void
      */
-    function inject($object) {
+    function inject_content($object) {
 
         if (@get_class($object) == __class__) {
-            $this->attributes['text'] .= $object->build();
+            $this->attributes['content'] .= $object->build_element();
         }
     }
 
@@ -109,22 +113,22 @@ class html_writer {
      *
      * @return string
      */
-    function build($type=null) {
+    function build_element($type=null) {
 
         if ($type != 'close') {
             $tag = '<' . $this->type;
-            if(count($this->attributes)) {
-                foreach($this->attributes as $key => $value) {
-                    if ($key != 'text') {
+            if (count($this->attributes)) {
+                foreach ($this->attributes as $key => $value) {
+                    if ($key != 'content') {
                         $tag .= " {$key}='{$value}'";
                     }
                 }
             }
-            if (!in_array($this->type, $this->voidelements)) {
+            if (!in_array($this->type, $this->void)) {
                 if ($type == 'open') {
                     $tag .= '>';
                 } else {
-                    $tag .= ">{$this->attributes['text']}</{$this->type}>";
+                    $tag .= ">{$this->attributes['content']}</{$this->type}>";
                 }
             } else {
                 $tag .= '/>';
@@ -137,16 +141,6 @@ class html_writer {
     }
 
     /**
-     * Output the element
-     *
-     * @return void
-     */
-    function output() {
-
-        echo $this->build();
-    }
-
-    /**
      * Return HTML link element
      *
      * @param string $url the link URL
@@ -156,50 +150,68 @@ class html_writer {
      */
     function link($url, $content, $attributes=array()) {
 
+        $attributes['href'] = $url;
+        $attributes['content'] = $content;
+
         $link = new html_writer('a');
-        $link->set_attribute('href', $url);
-        $link->set_attribute('text', $content);
+        $link->set_attributes($attributes);
 
-        if ($attributes) {
-            foreach ($attributes as $key => $value) {
-                $link->set_attribute($key, $value);
-            }
-        }
-
-        return $link->build();
+        return $link->build_element();
     }
 
+    /**
+     *
+     * @param string $content
+     * @param array $attributes
+     * @return string
+     */
     function div($content, $attributes=array()) {
 
+        $attributes['content'] = $content;
+
         $div = new html_writer('div');
-        $div->set_attribute('text', $content);
         $div->set_attributes($attributes);
 
-        return $div->build();
+        return $div->build_element();
     }
 
+    /**
+     *
+     * @param array $attributes
+     * @return string
+     */
     function div_open($attributes=array()) {
 
         $div = new html_writer('div');
         $div->set_attributes($attributes);
 
-        return $div->build('open');
+        return $div->build_element('open');
     }
 
+    /**
+     *
+     * @return string
+     */
     function div_close() {
 
         $div = new html_writer('div');
 
-        return $div->build('close');
+        return $div->build_element('close');
     }
 
+    /**
+     *
+     * @param string $content
+     * @param array $attributes
+     * @return string
+     */
     function span($content, $attributes=array()) {
 
+        $attributes['content'] = $content;
+
         $span = new html_writer('span');
-        $span->set_attribute('text', $content);
         $span->set_attributes($attributes);
 
-        return $span->build();
+        return $span->build_element();
     }
 }
-
