@@ -2,8 +2,30 @@
 
 class ID3TagsReader {
 
-    // variables
-    var $aTV23 = array( // array of possible sys tags (for last version of ID3)
+    // array of possible sys tags (for old version of ID3)
+    var $aTV22 = array(
+        'TT2',
+        'TAL',
+        'TP1',
+        'TRK',
+        'TYE',
+        'TLE',
+        'ULT'
+    );
+
+    // array of titles for sys tags (for old version of ID3)
+    var $aTV22t = array(
+        'Title',
+        'Album',
+        'Author',
+        'Track',
+        'Year',
+        'Lenght',
+        'Lyric'
+    );
+
+    // array of possible sys tags (for last version of ID3)
+    var $aTV23 = array(
         'TIT2',
         'TALB',
         'TPE1',
@@ -22,7 +44,9 @@ class ID3TagsReader {
         'COMM',
         'TCOM'
     );
-    var $aTV23t = array( // array of titles for sys tags
+
+    // array of titles for sys tags (for last version of ID3)
+    var $aTV23t = array(
         'Title',
         'Album',
         'Author',
@@ -41,58 +65,75 @@ class ID3TagsReader {
         'Comments',
         'Composer'
     );
-    var $aTV22 = array( // array of possible sys tags (for old version of ID3)
-        'TT2',
-        'TAL',
-        'TP1',
-        'TRK',
-        'TYE',
-        'TLE',
-        'ULT'
-    );
-    var $aTV22t = array( // array of titles for sys tags
-        'Title',
-        'Album',
-        'Author',
-        'Track',
-        'Year',
-        'Lenght',
-        'Lyric'
-    );
 
-    // constructor
-    function ID3TagsReader() {}
+    function __construct() {
+    }
 
-    // functions
-    function getTagsInfo($sFilepath) {
-        // read source file
-        $iFSize = filesize($sFilepath);
-        $vFD = fopen($sFilepath,'r');
-        $sSrc = fread($vFD,$iFSize);
-        fclose($vFD);
+    /**
+     * Return array of tags from passed MP3 path
+     *
+     * @param string $filepath
+     * @return array
+     */
+    function get_tag_info($filepath) {
 
-        // obtain base info
-        if (substr($sSrc,0,3) == 'ID3') {
-            $aInfo['FileName'] = $sFilepath;
-            $aInfo['Version'] = hexdec(bin2hex(substr($sSrc,3,1))).'.'.hexdec(bin2hex(substr($sSrc,4,1)));
+        // Read source file
+        $filesize = filesize($filepath);
+        $handle = fopen($filepath, 'r');
+        $mp3data = fread($handle, $filesize);
+        fclose($handle);
+
+        // Obtain base info
+        if (substr($mp3data, 0, 3) == 'ID3') {
+            $taginfo['FileName'] = $filepath;
+            $taginfo['Version'] = hexdec(bin2hex(substr($mp3data, 3, 1))) . '.' . hexdec(bin2hex(substr($mp3data, 4, 1)));
         }
 
-        // passing through possible tags of idv2 (v3 and v4)
-        if ($aInfo['Version'] == '4.0' || $aInfo['Version'] == '3.0') {
-            for ($i = 0; $i < count($this->aTV23); $i++) {
-                if (strpos($sSrc, $this->aTV23[$i].chr(0)) != FALSE) {
+        // Iterate through possible tags of idv2 (v2)
+        if($taginfo['Version'] == '2.0') {
+            for ($i = 0; $i < count($this->aTV22); $i++) {
+                if (strpos($mp3data, $this->aTV22[$i] . chr(0)) != false) {
 
-                    $s = '';
-                    $iPos = strpos($sSrc, $this->aTV23[$i].chr(0));
-                    $iLen = hexdec(bin2hex(substr($sSrc,($iPos + 5),3)));
+                    $string = '';
+                    $position = strpos($mp3data, $this->aTV22[$i] . chr(0));
+                    $length = hexdec(bin2hex(substr($mp3data, ($position + 3), 3)));
 
-                    $data = substr($sSrc, $iPos, 9 + $iLen);
+                    $data = substr($mp3data, $position, 6 + $length);
                     for ($a = 0; $a < strlen($data); $a++) {
                         $char = substr($data, $a, 1);
                         if ($char >= ' ' && $char <= '~')
-                            $s .= $char;
+                            $string .= $char;
                     }
-                    if (substr($s, 0, 4) == $this->aTV23[$i]) {
+
+                    if (substr($string, 0, 3) == $this->aTV22[$i]) {
+                        $iSL = 3;
+                        if ($this->aTV22[$i] == 'ULT') {
+                            $iSL = 6;
+                        }
+                        $taginfo[$this->aTV22t[$i]] = substr($string, $iSL);
+                    }
+                }
+            }
+        }
+
+        // Iterate through possible tags of idv2 (v3 and v4)
+        if ($taginfo['Version'] == '3.0' || $taginfo['Version'] == '4.0') {
+            for ($i = 0; $i < count($this->aTV23); $i++) {
+                if (strpos($mp3data, $this->aTV23[$i] . chr(0)) != false) {
+
+                    $string = '';
+                    $position = strpos($mp3data, $this->aTV23[$i] . chr(0));
+                    $length = hexdec(bin2hex(substr($mp3data, ($position + 5), 3)));
+
+                    $data = substr($mp3data, $position, 9 + $length);
+                    for ($a = 0; $a < strlen($data); $a++) {
+                        $char = substr($data, $a, 1);
+                        if ($char >= ' ' && $char <= '~') {
+                            $string .= $char;
+                        }
+                    }
+
+                    if (substr($string, 0, 4) == $this->aTV23[$i]) {
                         $iSL = 4;
                         if ($this->aTV23[$i] == 'USLT') {
                             $iSL = 7;
@@ -101,38 +142,12 @@ class ID3TagsReader {
                         } elseif ($this->aTV23[$i] == 'TENC') {
                             $iSL = 6;
                         }
-                        $aInfo[$this->aTV23t[$i]] = substr($s, $iSL);
+                        $taginfo[$this->aTV23t[$i]] = substr($string, $iSL);
                     }
                 }
             }
         }
 
-        // passing through possible tags of idv2 (v2)
-        if($aInfo['Version'] == '2.0') {
-            for ($i = 0; $i < count($this->aTV22); $i++) {
-                if (strpos($sSrc, $this->aTV22[$i].chr(0)) != FALSE) {
-
-                    $s = '';
-                    $iPos = strpos($sSrc, $this->aTV22[$i].chr(0));
-                    $iLen = hexdec(bin2hex(substr($sSrc,($iPos + 3),3)));
-
-                    $data = substr($sSrc, $iPos, 6 + $iLen);
-                    for ($a = 0; $a < strlen($data); $a++) {
-                        $char = substr($data, $a, 1);
-                        if ($char >= ' ' && $char <= '~')
-                            $s .= $char;
-                    }
-
-                    if (substr($s, 0, 3) == $this->aTV22[$i]) {
-                        $iSL = 3;
-                        if ($this->aTV22[$i] == 'ULT') {
-                            $iSL = 6;
-                        }
-                        $aInfo[$this->aTV22t[$i]] = substr($s, $iSL);
-                    }
-                }
-            }
-        }
-        return $aInfo;
+        return $taginfo;
     }
 }
